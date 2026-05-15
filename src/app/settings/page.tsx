@@ -147,7 +147,7 @@ export default function SettingsPage() {
       <div className="flex min-h-dvh">
         <DashboardSidebar />
 
-        <section className="min-h-dvh flex-1 lg:mr-[92px]">
+<section className="min-h-dvh flex-1 lg:mr-[240px]">
           <header className="sticky top-0 z-20 border-b border-[#E7EEFC] bg-white/75 px-5 py-5 backdrop-blur-2xl md:px-8">
             <h1 className="text-2xl font-black">الإعدادات</h1>
             <p className="mt-1 text-sm font-semibold text-[#7A89B7]">

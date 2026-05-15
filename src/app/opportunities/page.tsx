@@ -20,6 +20,11 @@ export default function OpportunitiesPage() {
     useState<RecommendedOpportunity | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiOpportunities, setAiOpportunities] = useState<
+    RecommendedOpportunity[]
+  >([]);
+
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [appliedOpportunityIds, setAppliedOpportunityIds] = useState<string[]>(
     []
@@ -76,6 +81,55 @@ export default function OpportunitiesPage() {
     if (!profile) return null;
     return analyzeMernProfile(profile, completions);
   }, [profile, completions]);
+
+  useEffect(() => {
+    async function loadAiOpportunities() {
+      if (!profile || !analysis) return;
+
+      setAiLoading(true);
+
+      try {
+        const response = await fetch("/api/ai/recommend-opportunities", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            profile,
+            completions,
+            readinessScore: analysis.readinessScore,
+            skills: analysis.skills,
+            weakSkills: analysis.weakSkills,
+            mediumSkills: analysis.mediumSkills,
+            strongSkills: analysis.strongSkills,
+            careerPaths: analysis.careerPaths,
+            targetRole: profile.target_role || profile.direction || "",
+            major: profile.major || "",
+            currentSkills: profile.skills || "",
+            experienceHours: profile.experience_hours || 0,
+          }),
+        });
+
+        if (!response.ok) {
+          setAiOpportunities([]);
+          return;
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data.opportunities)) {
+          setAiOpportunities(data.opportunities as RecommendedOpportunity[]);
+        }
+      } catch (error) {
+        console.error("AI opportunities error:", error);
+        setAiOpportunities([]);
+      } finally {
+        setAiLoading(false);
+      }
+    }
+
+    loadAiOpportunities();
+  }, [profile, analysis, completions]);
 
   async function handleApplyOpportunity(opportunity: RecommendedOpportunity) {
     setApplyingId(opportunity.id);
@@ -153,19 +207,27 @@ export default function OpportunitiesPage() {
     );
   }
 
-  const opportunities = analysis.recommendedOpportunities;
-  const topOpportunity = opportunities[0];
+  const opportunities =
+    aiOpportunities.length > 0
+      ? aiOpportunities
+      : analysis.recommendedOpportunities;
+
+  const sortedOpportunities = [...opportunities].sort(
+    (a, b) => b.match - a.match
+  );
+
+  const topOpportunity = sortedOpportunities[0];
 
   return (
     <main dir="rtl" className="min-h-dvh bg-[#F6F9FF] text-[#071D4B]">
       <div className="flex min-h-dvh">
         <DashboardSidebar />
 
-        <section className="min-h-dvh flex-1 lg:mr-[92px]">
+        <section className="min-h-dvh flex-1 lg:mr-[240px]">
           <header className="sticky top-0 z-20 border-b border-[#E7EEFC] bg-white/75 px-5 py-5 backdrop-blur-2xl md:px-8">
             <h1 className="text-2xl font-black">الفرص المهنية</h1>
             <p className="mt-1 text-sm font-semibold text-[#7A89B7]">
-              فرص وتجارب افتراضية مناسبة بناءً على جاهزيتك ومهاراتك الحالية
+              فرص وتجارب افتراضية مخصصة حسب بياناتك ومهاراتك ومسارك المهني
             </p>
           </header>
 
@@ -180,10 +242,11 @@ export default function OpportunitiesPage() {
                 <div className="rounded-[30px] border border-[#DCE6FA] bg-white/78 p-6 shadow-[0_18px_55px_rgba(7,29,75,0.07)] backdrop-blur-2xl">
                   <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                     <div>
-                      <h2 className="text-xl font-black">فرص مقترحة لك</h2>
+                      <h2 className="text-xl font-black">
+                        فرص مناسبة لاحتياجك
+                      </h2>
                       <p className="mt-1 text-sm font-semibold text-[#7A89B7]">
-                        تم ترتيب الفرص حسب نسبة توافقها مع ملفك المهني وتحليل
-                        مهاراتك
+                        تم ترتيب الفرص حسب التوافق مع تخصصك ومهاراتك ونقاط التطوير
                       </p>
                     </div>
 
@@ -191,13 +254,13 @@ export default function OpportunitiesPage() {
                       onClick={() => window.location.reload()}
                       className="h-12 rounded-2xl bg-[#071D8F] px-6 text-sm font-black text-white shadow-[0_12px_28px_rgba(7,29,143,0.25)]"
                     >
-                      تحديث الفرص
+                      {aiLoading ? "جاري التحديث..." : "تحديث الفرص"}
                     </button>
                   </div>
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-2">
-                  {opportunities.map((item) => {
+                  {sortedOpportunities.map((item) => {
                     const alreadyApplied = appliedOpportunityIds.includes(
                       item.id
                     );
@@ -227,7 +290,7 @@ export default function OpportunitiesPage() {
 
                         <div className="mb-5">
                           <div className="mb-2 flex justify-between text-xs font-black">
-                            <span>نسبة التوافق</span>
+                            <span>مطابقة احتياجك</span>
                             <span>{item.match}%</span>
                           </div>
                           <div className="h-3 overflow-hidden rounded-full bg-[#EEF3FF]">
@@ -273,12 +336,9 @@ export default function OpportunitiesPage() {
 
                   <div className="mt-6 space-y-4">
                     {[
-                      ["الفرص المناسبة", String(opportunities.length)],
+                      ["الفرص المناسبة", String(sortedOpportunities.length)],
                       ["أعلى توافق", `${topOpportunity?.match || 0}%`],
-                      [
-                        "طلبات التقديم",
-                        String(appliedOpportunityIds.length),
-                      ],
+                      ["طلبات التقديم", String(appliedOpportunityIds.length)],
                       ["المسار الأقرب", analysis.careerPaths[0]?.title || "-"],
                     ].map(([label, value]) => (
                       <div
@@ -298,7 +358,7 @@ export default function OpportunitiesPage() {
                   <h2 className="text-lg font-black">نصيحة مرن</h2>
                   <p className="mt-3 text-sm font-semibold leading-7 text-white/75">
                     {topOpportunity
-                      ? `ابدأ بفرصة ${topOpportunity.title} لأنها الأعلى توافقًا مع بياناتك الحالية بنسبة ${topOpportunity.match}%.`
+                      ? `ابدأ بفرصة ${topOpportunity.title} لأنها الأقرب لاحتياجك الحالي وتوافق ملفك بنسبة ${topOpportunity.match}%.`
                       : "أكمل بياناتك في الإعدادات حتى يتم اقتراح فرص أدق."}
                   </p>
                 </div>
@@ -416,8 +476,8 @@ export default function OpportunitiesPage() {
                   </div>
 
                   <p className="mt-6 text-sm font-semibold leading-7 text-white/75">
-                    هذه الفرصة متوافقة مع مهاراتك الحالية، وستساعدك على رفع
-                    جاهزيتك المهنية وإضافة تجربة عملية إلى ملفك.
+                    هذه الفرصة متوافقة مع مهاراتك الحالية وتساعدك على تقوية
+                    المهارات التي تحتاجها لمسارك المهني.
                   </p>
                 </div>
 

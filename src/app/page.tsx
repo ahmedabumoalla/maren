@@ -12,20 +12,23 @@ export default function HomePage() {
 
         <div className="relative z-10 flex min-h-dvh w-full flex-col items-center justify-center px-6 text-center">
           <div className="mb-6 flex flex-col items-center">
-            <h1 className="text-7xl font-black leading-none tracking-tight text-[#071D4B] md:text-8xl">
-              مرن
-            </h1>
+  <img
+    src="/images/mern-logo.png"
+    alt="Mern Logo"
+    className="mb-4 w-[280px] object-contain md:w-[360px]"
+    draggable={false}
+  />
 
-            <p className="mt-5 text-base font-black text-[#071D4B] md:text-lg">
-              خطواتك اليوم، مستقبلك غدًا
-            </p>
+  <p className="mt-2 text-base font-black text-[#071D4B] md:text-lg">
+    خطواتك اليوم، مستقبلك غدًا
+  </p>
 
-            <div className="mt-5 flex items-center justify-center gap-2">
-              <span className="h-px w-10 bg-[#C8D6F2]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#F5B700]" />
-              <span className="h-px w-10 bg-[#C8D6F2]" />
-            </div>
-          </div>
+  <div className="mt-5 flex items-center justify-center gap-2">
+    <span className="h-px w-10 bg-[#C8D6F2]" />
+    <span className="h-2.5 w-2.5 rounded-full bg-[#F5B700]" />
+    <span className="h-px w-10 bg-[#C8D6F2]" />
+  </div>
+</div>
 
           <Link
             href="/register"

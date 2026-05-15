@@ -18,6 +18,8 @@ export default function CoursesPage() {
   const [completions, setCompletions] = useState<CourseCompletion[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingCourseId, setSavingCourseId] = useState<string | null>(null);
+  const [aiCourses, setAiCourses] = useState<RecommendedCourse[]>([]);
+  const [aiCoursesLoading, setAiCoursesLoading] = useState(false);
 
   useEffect(() => {
     async function loadCoursesData() {
@@ -63,6 +65,57 @@ export default function CoursesPage() {
     return analyzeMernProfile(profile, completions);
   }, [profile, completions]);
 
+  useEffect(() => {
+    async function loadAiCourses() {
+      if (!profile || !analysis) return;
+
+      setAiCoursesLoading(true);
+
+      try {
+        const response = await fetch("/api/ai/recommend-courses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            profile,
+            completions,
+            skills: analysis.skills,
+            weakSkills: analysis.weakSkills,
+            mediumSkills: analysis.mediumSkills,
+            careerPaths: analysis.careerPaths,
+            targetRole: profile.target_role || profile.direction || "",
+            major: profile.major || "",
+            currentSkills: profile.skills || "",
+            interests: profile.direction || profile.target_role || "",
+            experienceHours: profile.experience_hours || 0,
+          }),
+        });
+
+        if (!response.ok) {
+          setAiCourses([]);
+          return;
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data.courses)) {
+          setAiCourses(data.courses as RecommendedCourse[]);
+        }
+      } catch (error) {
+        console.error("AI courses error:", error);
+        setAiCourses([]);
+      } finally {
+        setAiCoursesLoading(false);
+      }
+    }
+
+    loadAiCourses();
+  }, [profile, analysis, completions]);
+
+  const displayedCourses =
+    aiCourses.length > 0 ? aiCourses : analysis?.recommendedCourses || [];
+
   async function handleCompleteCourse(course: RecommendedCourse) {
     setSavingCourseId(course.id);
 
@@ -93,7 +146,6 @@ export default function CoursesPage() {
 
     fileInput.onchange = async () => {
       const file = fileInput.files?.[0];
-
       let certificateUrl = "";
 
       if (file) {
@@ -159,7 +211,7 @@ export default function CoursesPage() {
         <div className="rounded-[30px] border border-[#DCE6FA] bg-white/80 px-8 py-6 text-center shadow-[0_18px_55px_rgba(7,29,75,0.07)]">
           <p className="text-lg font-black">جاري تجهيز الدورات...</p>
           <p className="mt-2 text-sm font-semibold text-[#7A89B7]">
-            يتم اقتراح الدورات بناءً على بياناتك وتحليلك
+            يتم اقتراح الدورات بناءً على بياناتك وتحليل مهاراتك
           </p>
         </div>
       </main>
@@ -184,11 +236,11 @@ export default function CoursesPage() {
       <div className="flex min-h-dvh">
         <DashboardSidebar />
 
-        <section className="min-h-dvh flex-1 lg:mr-[92px]">
+        <section className="min-h-dvh flex-1 lg:mr-[240px]">
           <header className="sticky top-0 z-20 border-b border-[#E7EEFC] bg-white/75 px-5 py-5 backdrop-blur-2xl md:px-8">
             <h1 className="text-2xl font-black">الدورات المقترحة</h1>
             <p className="mt-1 text-sm font-semibold text-[#7A89B7]">
-              دورات مجانية ومفتوحة مقترحة حسب تحليل مهاراتك واحتياجك الحالي
+              دورات حقيقية يقترحها الذكاء الاصطناعي حسب مهاراتك واحتياجك المهني
             </p>
           </header>
 
@@ -219,16 +271,20 @@ export default function CoursesPage() {
 
               <div className="rounded-[28px] border border-[#DCE6FA] bg-white/80 p-5 shadow-[0_18px_55px_rgba(7,29,75,0.07)] backdrop-blur-2xl">
                 <p className="text-sm font-black text-[#7A89B7]">
-                  أولوية التطوير
+                  مصدر التوصيات
                 </p>
                 <h2 className="mt-3 text-xl font-black">
-                  {analysis.weakSkills[0]?.name || "مشروع تطبيقي"}
+                  {aiCoursesLoading
+                    ? "جاري التحليل..."
+                    : aiCourses.length > 0
+                      ? "OpenAI"
+                      : "تحليل مرن"}
                 </h2>
               </div>
             </div>
 
             <div className="relative z-10 grid gap-5 lg:grid-cols-2">
-              {analysis.recommendedCourses.map((course) => {
+              {displayedCourses.map((course) => {
                 const completed = completions.some(
                   (item) => item.course_id === course.id
                 );
@@ -294,7 +350,7 @@ export default function CoursesPage() {
                 );
               })}
 
-              {analysis.recommendedCourses.length === 0 && (
+              {displayedCourses.length === 0 && (
                 <div className="rounded-[30px] border border-[#DCE6FA] bg-white/80 p-8 text-center shadow-[0_18px_55px_rgba(7,29,75,0.07)] backdrop-blur-2xl lg:col-span-2">
                   <h2 className="text-xl font-black">لا توجد دورات جديدة الآن</h2>
                   <p className="mt-2 text-sm font-semibold text-[#7A89B7]">

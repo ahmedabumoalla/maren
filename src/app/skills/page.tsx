@@ -20,6 +20,9 @@ export default function SkillsPage() {
   const [loading, setLoading] = useState(true);
   const [savingCourseId, setSavingCourseId] = useState<string | null>(null);
 
+  const [aiCourses, setAiCourses] = useState<RecommendedCourse[]>([]);
+  const [aiCoursesLoading, setAiCoursesLoading] = useState(false);
+
   useEffect(() => {
     async function loadSkillsData() {
       setLoading(true);
@@ -63,6 +66,57 @@ export default function SkillsPage() {
     if (!profile) return null;
     return analyzeMernProfile(profile, completions);
   }, [profile, completions]);
+
+  useEffect(() => {
+    async function loadAiCourses() {
+      if (!profile || !analysis) return;
+
+      setAiCoursesLoading(true);
+
+      try {
+        const response = await fetch("/api/ai/recommend-courses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            profile,
+            completions,
+            skills: analysis.skills,
+            weakSkills: analysis.weakSkills,
+            mediumSkills: analysis.mediumSkills,
+            careerPaths: analysis.careerPaths,
+            targetRole: profile.target_role || profile.direction,
+            major: profile.major,
+            currentSkills: profile.skills,
+interests: profile.direction || profile.target_role || "",
+            experienceHours: profile.experience_hours || 0,
+          }),
+        });
+
+        if (!response.ok) {
+          setAiCourses([]);
+          return;
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data.courses)) {
+          setAiCourses(data.courses as RecommendedCourse[]);
+        }
+      } catch (error) {
+        console.error("AI courses error:", error);
+        setAiCourses([]);
+      } finally {
+        setAiCoursesLoading(false);
+      }
+    }
+
+    loadAiCourses();
+  }, [profile, analysis, completions]);
+
+  const displayedCourses =
+    aiCourses.length > 0 ? aiCourses : analysis?.recommendedCourses || [];
 
   async function handleCompleteCourse(course: RecommendedCourse) {
     setSavingCourseId(course.id);
@@ -159,7 +213,7 @@ export default function SkillsPage() {
         <div className="rounded-[30px] border border-[#DCE6FA] bg-white/80 px-8 py-6 text-center shadow-[0_18px_55px_rgba(7,29,75,0.07)]">
           <p className="text-lg font-black">جاري تحليل المهارات...</p>
           <p className="mt-2 text-sm font-semibold text-[#7A89B7]">
-            يتم بناء خريطة المهارات حسب بياناتك
+            يتم بناء خريطة المهارات باستخدام الذكاء الاصطناعي حسب بياناتك
           </p>
         </div>
       </main>
@@ -187,14 +241,14 @@ export default function SkillsPage() {
       <div className="flex min-h-dvh">
         <DashboardSidebar />
 
-        <section className="min-h-dvh flex-1 lg:mr-[92px]">
+        <section className="min-h-dvh flex-1 lg:mr-[240px]">
           <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-[#E7EEFC] bg-white/75 px-5 backdrop-blur-2xl md:px-8">
             <div>
               <h1 className="text-xl font-black md:text-2xl">
                 مهاراتك وتوصيات التطوير
               </h1>
               <p className="mt-1 text-xs font-semibold text-[#7A89B7] md:text-sm">
-                تحليل ذكي لمهاراتك مع اقتراح دورات مجانية ومصادر مفتوحة مناسبة لك
+                خريطة مهارات مبنية على بياناتك الحقيقية مع دورات يقترحها الذكاء الاصطناعي
               </p>
             </div>
 
@@ -317,12 +371,12 @@ export default function SkillsPage() {
                     <div>
                       <h2 className="text-xl font-black">خريطة المهارات</h2>
                       <p className="mt-1 text-sm font-semibold text-[#7A89B7]">
-                        مستوى كل مهارة بناءً على بيانات الطالب والدورات المكتملة
+                        مستوى كل مهارة بناءً على تخصصك ومسارك وبياناتك والدورات المكتملة
                       </p>
                     </div>
 
                     <span className="rounded-full bg-[#EEF4FF] px-4 py-2 text-xs font-black text-[#0A43D1]">
-                      AI Skills Scan
+                      تحليل مهاري بالذكاء الاصطناعي
                     </span>
                   </div>
 
@@ -373,20 +427,24 @@ export default function SkillsPage() {
                   <div className="mb-6 flex items-center justify-between">
                     <div>
                       <h2 className="text-xl font-black">
-                        دورات مجانية مقترحة لك
+                        دورات حقيقية مقترحة لك
                       </h2>
                       <p className="mt-1 text-sm font-semibold text-[#7A89B7]">
-                        تم اقتراحها بناءً على المهارات الأضعف والمسار المهني المستهدف
+                        يقترحها OpenAI حسب المهارات الأضعف والمسار المهني المستهدف
                       </p>
                     </div>
 
                     <span className="rounded-full bg-[#FFF7D8] px-4 py-2 text-xs font-black text-[#9A7600]">
-                      مصادر مفتوحة
+                      {aiCoursesLoading
+                        ? "جاري توليد التوصيات..."
+                        : aiCourses.length > 0
+                          ? "OpenAI"
+                          : "توصيات احتياطية"}
                     </span>
                   </div>
 
                   <div className="grid gap-4 xl:grid-cols-2">
-                    {analysis.recommendedCourses.map((course) => {
+                    {displayedCourses.map((course) => {
                       const completed = completions.some(
                         (item) => item.course_id === course.id
                       );
@@ -454,7 +512,7 @@ export default function SkillsPage() {
                       );
                     })}
 
-                    {analysis.recommendedCourses.length === 0 && (
+                    {displayedCourses.length === 0 && (
                       <div className="rounded-[24px] border border-[#E3EBFC] bg-[#FBFCFF] p-6 text-center xl:col-span-2">
                         <h3 className="text-lg font-black">
                           لا توجد دورات جديدة حاليًا
@@ -509,8 +567,8 @@ export default function SkillsPage() {
                   <p className="mt-3 max-w-3xl text-sm font-semibold leading-8 text-white/75">
                     يقوم المودل بقراءة بيانات الطالب مثل التخصص، المسار المستهدف،
                     المهارات الحالية، ساعات الخبرة، والدورات المكتملة. بعدها يحدد
-                    المهارات الضعيفة والمتوسطة والقوية، ثم يقترح مصادر تعلم مجانية
-                    ومفتوحة تساعد الطالب على رفع جاهزيته المهنية خطوة بخطوة.
+                    المهارات الضعيفة والمتوسطة والقوية، ثم يطلب من OpenAI اقتراح
+                    دورات حقيقية ومناسبة تساعد الطالب على رفع جاهزيته المهنية خطوة بخطوة.
                   </p>
                 </div>
               </div>

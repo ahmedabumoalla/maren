@@ -84,7 +84,7 @@ export default function DashboardPage() {
         <div className="rounded-[30px] border border-[#DCE6FA] bg-white/80 px-8 py-6 text-center shadow-[0_18px_55px_rgba(7,29,75,0.07)]">
           <p className="text-lg font-black">جاري تحليل بياناتك...</p>
           <p className="mt-2 text-sm font-semibold text-[#7A89B7]">
-            مرن يجهّز تقريرك الشخصي
+            مرن يجهّز تقريرك الشخصي باستخدام الذكاء الاصطناعي
           </p>
         </div>
       </main>
@@ -118,14 +118,14 @@ export default function DashboardPage() {
       <div className="flex min-h-dvh">
         <DashboardSidebar />
 
-        <section className="min-h-dvh flex-1 lg:mr-[92px]">
+        <section className="min-h-dvh flex-1 lg:mr-[240px]">
           <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-[#E7EEFC] bg-white/75 px-5 backdrop-blur-2xl md:px-8">
             <div>
               <h1 className="text-xl font-black md:text-2xl">
                 👋 {userName}، إليك تقريرك الشخصي
               </h1>
               <p className="mt-1 text-xs font-semibold text-[#7A89B7] md:text-sm">
-                تم تحليل بياناتك بناءً على مهاراتك واهتماماتك وجاهزيتك المهنية
+                تم تحليل إجاباتك وبياناتك باستخدام الذكاء الاصطناعي لبناء تقرير مهني دقيق ومخصص لك
               </p>
             </div>
 
@@ -246,7 +246,7 @@ export default function DashboardPage() {
                       أفضل المسارات المهنية المناسبة لك
                     </h2>
                     <span className="rounded-full bg-[#EEF4FF] px-4 py-2 text-xs font-black text-[#0A43D1]">
-                      تحليل ذكي
+                      AI Analysis
                     </span>
                   </div>
 
